@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+from keplergl import KeplerGl
+from streamlit_keplergl import keplergl_static
 
 # --- Configuración de la página ---
 st.set_page_config(
@@ -10,15 +12,14 @@ st.set_page_config(
 )
 
 # Título y descripción
-st.title("🗺️ Mapa Interactivo de Madrid")
+st.title("🗺️ Mapa Interactivo de Madrid con Kepler.gl")
 st.markdown("""
-Explora los principales puntos de interés de Madrid utilizando el mapa nativo de Streamlit.
+Explora los principales puntos de interés de Madrid utilizando **Kepler.gl** para visualizaciones avanzadas.
 """)
 
 # --- Datos de Madrid ---
 @st.cache_data
 def cargar_datos_madrid():
-    # Estructura de datos que contiene todos los puntos de interés de Madrid
     return pd.DataFrame({
         'nombre': [
             'Puerta del Sol', 'Palacio Real', 'Parque Retiro',
@@ -60,29 +61,56 @@ def cargar_datos_madrid():
         'importancia': [5, 5, 4, 5, 5, 4, 3, 4, 5, 4, 4, 3, 3]
     })
 
+# Configuración del mapa centrado en Madrid [citation:3]
+config_madrid = {
+    "version": "v1",
+    "config": {
+        "mapState": {
+            "latitude": 40.4168,    # Centro de Madrid
+            "longitude": -3.7038,   # Centro de Madrid
+            "zoom": 12,
+            "pitch": 0,
+            "bearing": 0
+        },
+        "mapStyle": {
+            "styleType": "dark"     # Puedes cambiar a "light" o "satellite"
+        }
+    }
+}
+
 # Sidebar con información
 with st.sidebar:
     st.header("ℹ️ Información")
     st.markdown("""
     **Instrucciones:**
-    - El mapa muestra los puntos de interés con un círculo.
-    - Usa el **zoom** para acercarte/alejarte.
-    - Consulta la tabla de abajo para la descripción detallada.
+    - **Haz clic** en cualquier punto para ver información detallada
+    - Usa el **zoom** para acercarte/alejarte
+    - **Arrastra** para mover el mapa
+    - Usa los controles de Kepler.gl para personalizar la visualización
     """)
     st.divider()
     st.markdown("### 📊 Datos del Mapa")
     st.metric("Puntos de interés", "13", "Madrid")
 
-
-# --- Crear y mostrar el mapa usando st.map() ---
+# --- Crear y mostrar el mapa usando Kepler.gl ---
 datos_madrid = cargar_datos_madrid()
 
-# Preparar los datos para st.map() renombrando las columnas
-map_data = datos_madrid[['lat', 'lon']].copy()
-map_data.columns = ['latitude', 'longitude'] 
-
-# Mostrar el mapa, centrado en Madrid (zoom 12)
-st.map(map_data, zoom=12, use_container_width=True)
+try:
+    # Crear mapa de Kepler.gl [citation:4][citation:7]
+    mapa = KeplerGl(height=600, config=config_madrid, show_docs=False)
+    
+    # Añadir datos al mapa [citation:3]
+    mapa.add_data(data=datos_madrid, name='puntos_madrid')
+    
+    # Mostrar el mapa en Streamlit [citation:1][citation:4]
+    keplergl_static(mapa)
+    
+except Exception as e:
+    st.error(f"Error al cargar el mapa de Kepler.gl: {str(e)}")
+    st.info("""
+    Si hay errores, verifica que tengas instaladas las dependencias necesarias.
+    Ejecuta: `pip install streamlit-keplergl keplergl pandas`
+    """)
 
 # Información adicional debajo del mapa
 col1, col2, col3 = st.columns(3)
@@ -104,9 +132,10 @@ st.divider()
 st.markdown(
     "---\n"
     "### 📝 Cómo usar esta aplicación\n"
-    "1. Explora el mapa interactivo de Madrid\n"
-    "2. Usa los controles del mapa para navegar\n"
-    "3. Consulta la tabla de abajo para ver la descripción de cada punto\n\n"
-    "*Desarrollado con Streamlit nativo*"
+    "1. Explora el mapa interactivo de Madrid con Kepler.gl\n"
+    "2. **Haz clic en los puntos** para ver información detallada\n"
+    "3. Usa los controles avanzados de Kepler.gl para personalizar la visualización\n\n"
+    "*Desarrollado con Streamlit + Kepler.gl*"
 )
+
 
