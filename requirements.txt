@@ -1,7 +1,5 @@
 streamlit
 pandas
-keplergl
-streamlit-keplergl
 
 
 
