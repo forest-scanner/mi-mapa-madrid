@@ -3,9 +3,7 @@ keplergl==0.3.2
 pandas==2.0.3
 numpy==1.24.3
 geopandas==0.13.2
-pygments==2.19.2
-rich==14.2.0
-markdown-it-py==4.0.0
+
 
 
 
