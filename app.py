@@ -4,7 +4,7 @@ from keplergl import KeplerGl
 import pandas as pd
 import os
 
-# Configuración de la página
+# --- Configuración de la página ---
 st.set_page_config(
     page_title="Mapa Interactivo de Madrid",
     page_icon="🗺️",
@@ -18,12 +18,12 @@ st.markdown("""
 Explora los principales puntos de interés de Madrid. **Haz clic** en cualquier marcador para ver más información.
 """)
 
-# Datos de Madrid
+# --- Datos de Madrid ---
 @st.cache_data
 def cargar_datos_madrid():
     return pd.DataFrame({
         'nombre': [
-            'Puerta del Sol', 'Palacio Real', 'Parque Retiro', 
+            'Puerta del Sol', 'Palacio Real', 'Parque Retiro',
             'Plaza Mayor', 'Museo del Prado', 'Estadio Santiago Bernabéu',
             'Templo de Debod', 'Gran Vía', 'Museo Reina Sofía',
             'Puerta de Alcalá', 'Catedral de la Almudena',
@@ -62,7 +62,7 @@ def cargar_datos_madrid():
         'importancia': [5, 5, 4, 5, 5, 4, 3, 4, 5, 4, 4, 3, 3]
     })
 
-# Configuración del mapa centrado en Madrid
+# --- Configuración del mapa (centrado en Madrid) ---
 config_madrid = {
     "version": "v1",
     "config": {
@@ -87,7 +87,7 @@ config_madrid = {
                         "color": [255, 203, 0],
                         "columns": {
                             "lat": "lat",
-                            "lng": "lon"
+                            "lng": "lon" # Mapea 'lng' de Kepler al campo 'lon' del DataFrame
                         },
                         "isVisible": True,
                         "visConfig": {
@@ -99,6 +99,7 @@ config_madrid = {
                         }
                     },
                     "visualChannels": {
+                        # Configuración para colorear por la columna 'importancia'
                         "colorField": {"name": "importancia", "type": "integer"},
                         "colorScale": "quantile"
                     }
@@ -124,14 +125,18 @@ with st.sidebar:
     - Haz **clic** en cualquier punto para ver detalles
     - Usa el **zoom** para acercarte/alejarte
     - **Arrastra** para mover el mapa
-    
-    **Leyenda:**
+
+    **Nota sobre el color:** La capa de datos utiliza la columna 'importancia' para el esquema de color (gradiente), lo que difiere de la leyenda de 'tipo' a continuación.
+    """)
+
+    st.markdown("""
+    **Leyenda de la barra lateral (basada en tipo de lugar):**
     - 🔵 **Azul**: Museos y cultural
-    - 🟢 **Verde**: Parques y jardines  
+    - 🟢 **Verde**: Parques y jardines
     - 🟡 **Amarillo**: Monumentos
     - 🔴 **Rojo**: Plazas y puntos emblemáticos
     """)
-    
+
     st.divider()
     st.markdown("### 📊 Datos del Mapa")
     st.metric("Puntos de interés", "13", "Madrid")
@@ -139,14 +144,20 @@ with st.sidebar:
 # Cargar datos
 datos_madrid = cargar_datos_madrid()
 
-# Crear y mostrar el mapa
+# --- Crear y mostrar el mapa (Implementando la corrección) ---
 try:
-    mapa = KeplerGl(height=700, config=config_madrid)
-    mapa.add_data(data=datos_madrid, name='madrid_data')
-    
+    # **CORRECCIÓN CLAVE:**
+    # Pasamos los datos y la configuración al constructor de KeplerGl
+    # en un solo paso, lo cual es más estable para Streamlit.
+    mapa = KeplerGl(
+        data={"madrid_data": datos_madrid}, # El nombre 'madrid_data' coincide con el 'dataId' de la configuración
+        config=config_madrid,
+        height=700
+    )
+
     # Mostrar el mapa en Streamlit
     keplergl_static(mapa)
-    
+
     # Información adicional debajo del mapa
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -155,10 +166,10 @@ try:
         st.metric("Espacios verdes", "2", "parques y jardines")
     with col3:
         st.metric("Puntos emblemáticos", "6", "plazas y edificios")
-        
+
 except Exception as e:
-    st.error(f"Error al cargar el mapa: {str(e)}")
-    st.info("Asegúrate de tener instaladas todas las dependencias")
+    # He ajustado el mensaje de error para dar más contexto si el problema persiste
+    st.error(f"Error al cargar el mapa. Verifica las dependencias y la configuración de Kepler: {str(e)}")
 
 # Footer
 st.divider()
