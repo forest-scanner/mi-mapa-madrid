@@ -1,8 +1,5 @@
 import streamlit as st
-from streamlit_keplergl import keplergl_static
-from keplergl import KeplerGl
 import pandas as pd
-import os
 
 # --- Configuración de la página ---
 st.set_page_config(
@@ -15,12 +12,13 @@ st.set_page_config(
 # Título y descripción
 st.title("🗺️ Mapa Interactivo de Madrid")
 st.markdown("""
-Explora los principales puntos de interés de Madrid. **Haz clic** en cualquier marcador para ver más información.
+Explora los principales puntos de interés de Madrid utilizando el mapa nativo de Streamlit.
 """)
 
 # --- Datos de Madrid ---
 @st.cache_data
 def cargar_datos_madrid():
+    # Estructura de datos que contiene todos los puntos de interés de Madrid
     return pd.DataFrame({
         'nombre': [
             'Puerta del Sol', 'Palacio Real', 'Parque Retiro',
@@ -62,114 +60,44 @@ def cargar_datos_madrid():
         'importancia': [5, 5, 4, 5, 5, 4, 3, 4, 5, 4, 4, 3, 3]
     })
 
-# --- Configuración del mapa (centrado en Madrid) ---
-config_madrid = {
-    "version": "v1",
-    "config": {
-        "mapState": {
-            "latitude": 40.4168,
-            "longitude": -3.7038,
-            "zoom": 12,
-            "pitch": 0,
-            "bearing": 0
-        },
-        "mapStyle": {
-            "styleType": "dark"
-        },
-        "visState": {
-            "layers": [
-                {
-                    "id": "madrid_points",
-                    "type": "point",
-                    "config": {
-                        "dataId": "madrid_data",
-                        "label": "Puntos de Interés Madrid",
-                        "color": [255, 203, 0],
-                        "columns": {
-                            "lat": "lat",
-                            "lng": "lon" # Mapea 'lng' de Kepler al campo 'lon' del DataFrame
-                        },
-                        "isVisible": True,
-                        "visConfig": {
-                            "radius": 12,
-                            "opacity": 0.8,
-                            "outline": False,
-                            "thickness": 2,
-                            "filled": True
-                        }
-                    },
-                    "visualChannels": {
-                        # Configuración para colorear por la columna 'importancia'
-                        "colorField": {"name": "importancia", "type": "integer"},
-                        "colorScale": "quantile"
-                    }
-                }
-            ],
-            "interactionConfig": {
-                "tooltip": {
-                    "fieldsToShow": {
-                        "madrid_data": ["nombre", "tipo", "descripcion"]
-                    },
-                    "enabled": True
-                }
-            }
-        }
-    }
-}
-
 # Sidebar con información
 with st.sidebar:
     st.header("ℹ️ Información")
     st.markdown("""
     **Instrucciones:**
-    - Haz **clic** en cualquier punto para ver detalles
-    - Usa el **zoom** para acercarte/alejarte
-    - **Arrastra** para mover el mapa
-
-    **Nota sobre el color:** La capa de datos utiliza la columna 'importancia' para el esquema de color (gradiente), lo que difiere de la leyenda de 'tipo' a continuación.
+    - El mapa muestra los puntos de interés con un círculo.
+    - Usa el **zoom** para acercarte/alejarte.
+    - Consulta la tabla de abajo para la descripción detallada.
     """)
-
-    st.markdown("""
-    **Leyenda de la barra lateral (basada en tipo de lugar):**
-    - 🔵 **Azul**: Museos y cultural
-    - 🟢 **Verde**: Parques y jardines
-    - 🟡 **Amarillo**: Monumentos
-    - 🔴 **Rojo**: Plazas y puntos emblemáticos
-    """)
-
     st.divider()
     st.markdown("### 📊 Datos del Mapa")
     st.metric("Puntos de interés", "13", "Madrid")
 
-# Cargar datos
+
+# --- Crear y mostrar el mapa usando st.map() ---
 datos_madrid = cargar_datos_madrid()
 
-# --- Crear y mostrar el mapa (Implementando la corrección) ---
-try:
-    # **CORRECCIÓN CLAVE:**
-    # Pasamos los datos y la configuración al constructor de KeplerGl
-    # en un solo paso, lo cual es más estable para Streamlit.
-    mapa = KeplerGl(
-        data={"madrid_data": datos_madrid}, # El nombre 'madrid_data' coincide con el 'dataId' de la configuración
-        config=config_madrid,
-        height=700
-    )
+# Preparar los datos para st.map() renombrando las columnas
+map_data = datos_madrid[['lat', 'lon']].copy()
+map_data.columns = ['latitude', 'longitude'] 
 
-    # Mostrar el mapa en Streamlit
-    keplergl_static(mapa)
+# Mostrar el mapa, centrado en Madrid (zoom 12)
+st.map(map_data, zoom=12, use_container_width=True)
 
-    # Información adicional debajo del mapa
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Puntos culturales", "5", "museos y monumentos")
-    with col2:
-        st.metric("Espacios verdes", "2", "parques y jardines")
-    with col3:
-        st.metric("Puntos emblemáticos", "6", "plazas y edificios")
+# Información adicional debajo del mapa
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("Puntos culturales", "5", "museos y monumentos")
+with col2:
+    st.metric("Espacios verdes", "2", "parques y jardines")
+with col3:
+    st.metric("Puntos emblemáticos", "6", "plazas y edificios")
 
-except Exception as e:
-    # He ajustado el mensaje de error para dar más contexto si el problema persiste
-    st.error(f"Error al cargar el mapa. Verifica las dependencias y la configuración de Kepler: {str(e)}")
+st.divider()
+
+# Mostrar los datos completos para el detalle de la descripción
+with st.expander("Tabla de Puntos de Interés (Detalles de Descripción)"):
+    st.dataframe(datos_madrid, use_container_width=True)
 
 # Footer
 st.divider()
@@ -177,7 +105,8 @@ st.markdown(
     "---\n"
     "### 📝 Cómo usar esta aplicación\n"
     "1. Explora el mapa interactivo de Madrid\n"
-    "2. Haz clic en los puntos para ver información detallada\n"
-    "3. Usa los controles del mapa para navegar\n\n"
-    "*Desarrollado con Streamlit + Kepler.gl*"
+    "2. Usa los controles del mapa para navegar\n"
+    "3. Consulta la tabla de abajo para ver la descripción de cada punto\n\n"
+    "*Desarrollado con Streamlit nativo*"
 )
+
